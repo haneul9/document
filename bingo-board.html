@@ -1,0 +1,225 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>빙고판 만들기</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #fff9db;
+      text-align: center;
+      padding: 10px;
+      margin: 0;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    table {
+      margin: 0 auto;
+      border-collapse: collapse;
+    }
+
+    td {
+      border: 1px solid #555;
+      width: 60px;
+      height: 60px;
+      text-align: center;
+      vertical-align: middle;
+      font-size: 20px;
+      cursor: pointer;
+      user-select: none;
+      background-color: white;
+      transition: background-color 0.2s;
+    }
+
+    td.checked {
+      background-color: #6bc46b;
+      color: white;
+      font-weight: bold;
+    }
+
+    td.bingo-line {
+      background-color: #fcbaba !important;
+    }
+
+    input[type="number"] {
+      width: 55px;
+      height: 55px;
+      font-size: 18px;
+      text-align: center;
+    }
+
+    .controls {
+      margin: 10px 0;
+    }
+
+    .controls button,
+    .controls input {
+      padding: 10px;
+      font-size: 16px;
+      margin: 5px;
+    }
+
+    #bingo-info {
+      margin-top: 15px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    @media screen and (max-width: 500px) {
+      td, input[type="number"] {
+        width: 45px;
+        height: 45px;
+        font-size: 16px;
+      }
+      .controls button, .controls input {
+        font-size: 14px;
+        padding: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>5x5 빙고판</h1>
+
+  <div class="controls">
+    최대 숫자:
+    <input type="number" id="max-number" value="75" min="25" max="999" style=“width:25px;height:25px;” />
+    <button onclick="fillRandom()">무작위 입력</button>
+    <button onclick="startBingo()">시작</button>
+    <button onclick="resetBoard()">초기화</button>
+  </div>
+
+  <div id="bingo-container"></div>
+  <div id="bingo-info"></div>
+
+  <script>
+    const size = 5;
+    const container = document.getElementById("bingo-container");
+
+    function createInputBoard() {
+      const table = document.createElement("table");
+      for (let i = 0; i < size; i++) {
+        const row = document.createElement("tr");
+        for (let j = 0; j < size; j++) {
+          const cell = document.createElement("td");
+          const input = document.createElement("input");
+          input.type = "number";
+          input.min = 1;
+          input.required = true;
+          cell.appendChild(input);
+          row.appendChild(cell);
+        }
+        table.appendChild(row);
+      }
+      container.innerHTML = "";
+      container.appendChild(table);
+      document.getElementById("bingo-info").textContent = "";
+    }
+
+    function fillRandom() {
+      const max = parseInt(document.getElementById("max-number").value) || 75;
+      const numbers = Array.from({ length: max }, (_, i) => i + 1);
+      const shuffled = numbers.sort(() => Math.random() - 0.5).slice(0, 25);
+      const inputs = container.querySelectorAll("input");
+      inputs.forEach((input, index) => {
+        input.value = shuffled[index];
+      });
+    }
+
+    function startBingo() {
+      const inputs = container.querySelectorAll("input");
+      const values = Array.from(inputs).map(input => input.value.trim());
+
+      if (values.includes("") || new Set(values).size !== values.length) {
+        alert("모든 칸에 중복 없이 숫자를 입력해 주세요.");
+        return;
+      }
+
+      const table = document.createElement("table");
+      let idx = 0;
+      const cellRefs = [];
+
+      for (let i = 0; i < size; i++) {
+        const row = document.createElement("tr");
+        const rowCells = [];
+        for (let j = 0; j < size; j++) {
+          const cell = document.createElement("td");
+          const num = values[idx++];
+          cell.textContent = num;
+          cell.dataset.row = i;
+          cell.dataset.col = j;
+          cell.addEventListener("click", () => {
+            cell.classList.toggle("checked");
+            checkBingo();
+          });
+          row.appendChild(cell);
+          rowCells.push(cell);
+        }
+        table.appendChild(row);
+        cellRefs.push(rowCells);
+      }
+
+      container.innerHTML = "";
+      container.appendChild(table);
+      window.bingoCells = cellRefs;
+    }
+
+    function checkBingo() {
+      const board = window.bingoCells;
+      const marked = (i, j) => board[i][j].classList.contains("checked");
+
+      let completed = new Set();
+
+      // 기존 라인 색상 제거
+      for (let i = 0; i < size; i++) {
+        for (let j = 0; j < size; j++) {
+          board[i][j].classList.remove("bingo-line");
+        }
+      }
+
+      // 가로줄
+      for (let i = 0; i < size; i++) {
+        if ([...Array(size)].every((_, j) => marked(i, j))) {
+          completed.add("row" + i);
+          for (let j = 0; j < size; j++) board[i][j].classList.add("bingo-line");
+        }
+      }
+
+      // 세로줄
+      for (let j = 0; j < size; j++) {
+        if ([...Array(size)].every((_, i) => marked(i, j))) {
+          completed.add("col" + j);
+          for (let i = 0; i < size; i++) board[i][j].classList.add("bingo-line");
+        }
+      }
+
+      // 대각선 ↘
+      if ([...Array(size)].every((_, i) => marked(i, i))) {
+        completed.add("diag1");
+        for (let i = 0; i < size; i++) board[i][i].classList.add("bingo-line");
+      }
+
+      // 대각선 ↙
+      if ([...Array(size)].every((_, i) => marked(i, size - 1 - i))) {
+        completed.add("diag2");
+        for (let i = 0; i < size; i++) board[i][size - 1 - i].classList.add("bingo-line");
+      }
+
+      const lineCount = completed.size;
+      document.getElementById("bingo-info").textContent = lineCount > 0 ? `빙고: ${lineCount}줄` : "";
+    }
+
+    function resetBoard() {
+      createInputBoard();
+    }
+
+    window.onload = createInputBoard;
+  </script>
+</body>
+</html>
