@@ -60,7 +60,7 @@
   <button id="reset-btn" onclick="resetDraw()">🔄 초기화</button>
 
   <script>
-    let numbers = Array.from({ length: 75 }, (_, i) => i + 1);
+    let numbers = Array.from({ length: 35 }, (_, i) => i + 1);
     let usedNumbers = [];
 
     function drawNumber() {
@@ -79,7 +79,7 @@
 
     function resetDraw() {
       if (confirm("정말로 초기화할까요?")) {
-        numbers = Array.from({ length: 75 }, (_, i) => i + 1);
+        numbers = Array.from({ length: 35 }, (_, i) => i + 1);
         usedNumbers = [];
         document.getElementById('result').innerText = '';
         document.getElementById('used').innerText = '';
