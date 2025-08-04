@@ -1,73 +1,72 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>무작위 숫자 추첨 (1~75)</title>
+  <title>무작위 숫자 추첨</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 30px;
-      position: relative;
-    }
+    body { font-family: Arial; text-align: center; padding: 30px; position: relative; }
     #draw-btn {
-      font-size: 36px;
-      padding: 20px 40px;
-      background-color: #e53935;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
+      font-size: 36px; padding: 20px 40px; background-color: #e53935;
+      color: white; border: none; border-radius: 10px; cursor: pointer;
     }
-    #draw-btn:hover {
-      background-color: #c62828;
-    }
-    #result {
-      font-size: 48px;
-      margin: 30px 0;
-      color: #0077cc;
-    }
-    #used {
-      margin-top: 20px;
-      font-size: 16px;
-      line-height: 1.5;
-    }
+    #draw-btn:hover { background-color: #c62828; }
+    #result { font-size: 48px; margin: 30px 0; color: #0077cc; }
+    #used { margin-top: 20px; font-size: 16px; line-height: 1.5; }
     #reset-btn {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      font-size: 14px;
-      padding: 8px 12px;
-      background-color: #aaa;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      opacity: 0.5;
-      cursor: pointer;
+      position: fixed; bottom: 20px; right: 20px; font-size: 14px;
+      padding: 8px 12px; background-color: #aaa; color: white;
+      border: none; border-radius: 5px; opacity: 0.5; cursor: pointer;
     }
-    #reset-btn:hover {
-      opacity: 1;
-      background-color: #888;
+    #reset-btn:hover { opacity: 1; background-color: #888; }
+    #max-input {
+      font-size: 20px; padding: 6px 12px; width: 80px; text-align: center;
+      margin-bottom: 20px;
     }
   </style>
 </head>
 <body>
-  <h1>무작위 숫자 추첨 (1~75)</h1>
+  <h1>무작위 숫자 추첨</h1>
+
+  <label>최대 숫자: <input id="max-input" type="number" min="1" value="75"></label><br>
   <button id="draw-btn" onclick="drawNumber()">🎲 숫자 뽑기</button>
   <div id="result"></div>
   <div id="used"></div>
   <button id="reset-btn" onclick="resetDraw()">🔄 초기화</button>
 
+  <!-- 벨소리 -->
+  <audio id="bell-sound"
+         src="https://upload.wikimedia.org/wikipedia/commons/5/5c/Sound_Effect_-_Door_Bell.ogg"
+         preload="auto"></audio>
+
   <script>
-    let numbers = Array.from({ length: 35 }, (_, i) => i + 1);
+    let numbers = [];
     let usedNumbers = [];
+    let maxValue = 75;
+
+    function initializeNumbers() {
+      numbers = Array.from({ length: maxValue }, (_, i) => i + 1);
+      usedNumbers = [];
+      document.getElementById('result').innerText = '';
+      document.getElementById('used').innerText = '';
+    }
 
     function drawNumber() {
+      const inputValue = parseInt(document.getElementById('max-input').value);
+      if (isNaN(inputValue) || inputValue < 1) {
+        alert("최대 숫자를 올바르게 입력하세요!");
+        return;
+      }
+
+      if (inputValue !== maxValue || numbers.length === 0) {
+        maxValue = inputValue;
+        initializeNumbers();
+      }
+
       if (numbers.length === 0) {
         document.getElementById('result').innerText = "모든 숫자를 뽑았습니다!";
         return;
       }
+
       const index = Math.floor(Math.random() * numbers.length);
       const num = numbers.splice(index, 1)[0];
       usedNumbers.push(num);
@@ -75,14 +74,14 @@
       document.getElementById('result').innerText = num;
       document.getElementById('used').innerText =
         "지금까지 나온 숫자: " + usedNumbers.sort((a, b) => a - b).join(', ');
+
+      document.getElementById('bell-sound').play();
     }
 
     function resetDraw() {
       if (confirm("정말로 초기화할까요?")) {
-        numbers = Array.from({ length: 35 }, (_, i) => i + 1);
-        usedNumbers = [];
-        document.getElementById('result').innerText = '';
-        document.getElementById('used').innerText = '';
+        maxValue = parseInt(document.getElementById('max-input').value) || 75;
+        initializeNumbers();
       }
     }
   </script>
