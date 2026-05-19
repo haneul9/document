@@ -1,89 +1,536 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <title>무작위 숫자 추첨</title>
-  <style>
-    body { font-family: Arial; text-align: center; padding: 30px; position: relative; }
-    #draw-btn {
-      font-size: 36px; padding: 20px 40px; background-color: #e53935;
-      color: white; border: none; border-radius: 10px; cursor: pointer;
-    }
-    #draw-btn:hover { background-color: #c62828; }
-    #result { font-size: 48px; margin: 30px 0; color: #0077cc; }
-    #used { margin-top: 20px; font-size: 16px; line-height: 1.5; }
-    #reset-btn {
-      position: fixed; bottom: 20px; right: 20px; font-size: 14px;
-      padding: 8px 12px; background-color: #aaa; color: white;
-      border: none; border-radius: 5px; opacity: 0.5; cursor: pointer;
-    }
-    #reset-btn:hover { opacity: 1; background-color: #888; }
-    #max-input {
-      font-size: 20px; padding: 6px 12px; width: 80px; text-align: center;
-      margin-bottom: 20px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>성유나 빙고 게임</title>
+<style>
+* {
+  margin: 0; padding: 0; box-sizing: border-box;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none; -webkit-user-select: none;
+}
+body {
+  background: #0d0d1a; color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 10px 10px 28px;
+}
+
+h1 { font-size: 1.25rem; letter-spacing: 3px; margin-bottom: 8px; color: #c8c8ff; }
+
+/* ── 모드 선택 ── */
+#modeWrap {
+  width: 100%; max-width: 420px; margin-bottom: 8px;
+}
+#modeTitle {
+  font-size: 0.68rem; color: #666688; letter-spacing: 1px;
+  margin-bottom: 5px; text-align: center;
+}
+#modeBtns {
+  display: flex; flex-wrap: wrap; gap: 5px; justify-content: center;
+}
+.mbtn {
+  padding: 5px 11px; border-radius: 20px;
+  border: 1.5px solid #2a2a5a; background: #1a1a30;
+  color: #666699; font-size: 0.78rem; font-weight: 700;
+  cursor: pointer; -webkit-appearance: none; transition: all 0.15s;
+}
+.mbtn:active { transform: scale(0.93); }
+.mbtn.on { background: #ff4d6d; border-color: #ff4d6d; color: #fff; box-shadow: 0 0 8px rgba(255,77,109,0.4); }
+.mbtn.h-on  { background: #457b9d; border-color: #457b9d; color: #fff; box-shadow: 0 0 8px rgba(69,123,157,0.4); }
+.mbtn.i-on  { background: #2a9d8f; border-color: #2a9d8f; color: #fff; box-shadow: 0 0 8px rgba(42,157,143,0.4); }
+.mbtn.n-on  { background: #8338ec; border-color: #8338ec; color: #fff; box-shadow: 0 0 8px rgba(131,56,236,0.4); }
+.mbtn.full-on{ background: #f0a020; border-color: #f0a020; color: #fff; box-shadow: 0 0 8px rgba(240,160,32,0.4); }
+
+/* ── 볼 풀 ── */
+#pool {
+  width: 100%; max-width: 420px; height: 110px;
+  background: #111128; border-radius: 14px;
+  border: 2px solid #2a2a5a; position: relative; overflow: hidden;
+  margin-bottom: 8px;
+  box-shadow: inset 0 0 24px rgba(0,0,60,0.5);
+}
+.ball {
+  position: absolute; width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.67rem; font-weight: 800; color: #fff;
+  pointer-events: none; will-change: transform;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.45), inset 0 -2px 4px rgba(0,0,0,0.2);
+}
+
+/* ── 추첨 행 ── */
+.draw-row {
+  display: flex; gap: 10px; align-items: stretch;
+  width: 100%; max-width: 420px; margin-bottom: 7px;
+}
+#curBox {
+  flex: 0 0 82px; min-height: 68px;
+  background: #1c1c36; border-radius: 12px;
+  border: 2px solid #2a2a5a;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+#curBox.on { border-color: #ff4d6d; box-shadow: 0 0 18px rgba(255,77,109,0.3); }
+#curNum { font-size: 2rem; font-weight: 900; color: #333355; line-height: 1; }
+#curBox.on #curNum { color: #fff; }
+#curLbl { font-size: 0.5rem; color: #ff4d6d; letter-spacing: 1px; opacity: 0; margin-top: 3px; }
+#curBox.on #curLbl { opacity: 1; }
+
+.side-btns { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+button {
+  border: none; border-radius: 10px; font-size: 0.83rem; font-weight: 700;
+  cursor: pointer; -webkit-appearance: none; transition: transform 0.1s;
+}
+button:active { transform: scale(0.93); }
+#btnDraw {
+  flex: 1;
+  background: linear-gradient(135deg, #ff4d6d, #c9184a); color: #fff;
+  box-shadow: 0 3px 12px rgba(255,77,109,0.3);
+}
+#btnDraw:disabled { background: #333; color: #555; box-shadow: none; }
+.row2 { display: flex; gap: 5px; }
+#btnNewCard, #btnRestart { flex: 1; padding: 8px 0; font-size: 0.75rem; }
+#btnNewCard { background: #1c3050; color: #9bbedd; border: 1px solid #2a4a7a; }
+#btnRestart { background: #2a1535; color: #cc9ddd; border: 1px solid #4a2a6a; }
+
+/* ── 통계 ── */
+#stats { font-size: 0.73rem; color: #666688; margin-bottom: 7px; text-align: center; }
+#stats span { color: #aaaadd; font-weight: bold; }
+#stats .bc { color: #f0a020; font-weight: 900; }
+
+/* ── BINGO 카드 ── */
+.card-wrap { width: 100%; max-width: 420px; }
+.bingo-hdr {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 4px;
+}
+.bh { text-align: center; font-size: 1.1rem; font-weight: 900; padding: 5px 0; border-radius: 8px; }
+.B { background: #e63946; }
+.I { background: #2a9d8f; }
+.N { background: #c9a020; color: #1a1a00; }
+.G { background: #457b9d; }
+.O { background: #8338ec; }
+
+#cardGrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+
+.cc {
+  aspect-ratio: 1; border-radius: 8px;
+  background: #1a1a30; border: 2px solid #2a2a50;
+  display: flex; align-items: center; justify-content: center;
+  font-size: clamp(0.7rem, 3.4vw, 1rem); font-weight: 700;
+  color: #666699; transition: all 0.2s; cursor: pointer;
+}
+.cc:not(.free):active { transform: scale(0.88); opacity: 0.7; }
+/* FREE */
+.cc.free { color: #c9a020; border-color: #5a4a10; background: #1e1a08; font-size: 0.78rem; cursor: default; }
+/* 일반 마킹 */
+.cc.hit  { background: #1e0d16; border-color: #ff4d6d; color: #ff4d6d; transform: scale(1.05); }
+/* 패턴 목표 칸 (미마킹) */
+.cc.target { border: 2px dashed #4a4a90; color: #6666bb; background: #14142a; }
+/* 패턴 목표 칸 (마킹됨) */
+.cc.hit-t { background: #0d1e30; border-color: #5aaaf0; color: #5aaaf0; transform: scale(1.05); }
+/* 빙고 완성 라인 */
+.cc.bingo { background: #f0a020; border-color: #f0c040; color: #fff; box-shadow: 0 0 10px rgba(240,160,0,0.55); transform: scale(1.07); }
+
+/* ── 토스트 ── */
+#toast {
+  display: none; position: fixed; inset: 0; z-index: 100;
+  align-items: center; justify-content: center; pointer-events: none;
+}
+#toast.on { display: flex; }
+#toastInner {
+  background: linear-gradient(135deg, #f0a020, #e94560);
+  color: #fff; font-weight: 900;
+  padding: 18px 38px; border-radius: 22px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6); letter-spacing: 3px;
+  animation: bpop 1.7s ease forwards; text-align: center;
+}
+@keyframes bpop {
+  0%   { transform: scale(0) rotate(-8deg); opacity: 0; }
+  20%  { transform: scale(1.12) rotate(1.5deg); opacity: 1; }
+  80%  { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.7); opacity: 0; }
+}
+
+/* ── 힌트 + 뽑힌 번호 ── */
+#tapHint { margin-top: 7px; font-size: 0.68rem; color: #555577; text-align: center; }
+#drawnWrap { width: 100%; max-width: 420px; margin-top: 8px; }
+#drawnTitle { font-size: 0.68rem; color: #555577; margin-bottom: 4px; text-align: center; }
+#drawnNums { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; max-height: 86px; overflow-y: auto; }
+.dn {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.57rem; font-weight: 800; color: #fff; opacity: 0.85;
+}
+.dn.latest { outline: 2px solid #fff; opacity: 1; box-shadow: 0 0 6px rgba(255,255,255,0.4); }
+</style>
 </head>
 <body>
-  <h1>무작위 숫자 추첨</h1>
 
-  <label>최대 숫자: <input id="max-input" type="number" min="1" value="75"></label><br>
-  <button id="draw-btn" onclick="drawNumber()">🎲 숫자 뽑기</button>
-  <div id="result"></div>
-  <div id="used"></div>
-  <button id="reset-btn" onclick="resetDraw()">🔄 초기화</button>
+<h1>🎱 성유나 빙고 게임</h1>
 
-  <!-- 벨소리 -->
-  <audio id="bell-sound"
-         src="https://upload.wikimedia.org/wikipedia/commons/5/5c/Sound_Effect_-_Door_Bell.ogg"
-         preload="auto"></audio>
+<!-- 빙고 유형 선택 -->
+<div id="modeWrap">
+  <div id="modeTitle">빙고 유형 선택</div>
+  <div id="modeBtns">
+    <button class="mbtn on" data-mode="1줄">1줄</button>
+    <button class="mbtn" data-mode="2줄">2줄</button>
+    <button class="mbtn" data-mode="3줄">3줄</button>
+    <button class="mbtn" data-mode="4줄">4줄</button>
+    <button class="mbtn" data-mode="5줄">5줄</button>
+    <button class="mbtn" data-mode="올빙고">올빙고</button>
+    <button class="mbtn" data-mode="H">H빙고</button>
+    <button class="mbtn" data-mode="I">I빙고</button>
+    <button class="mbtn" data-mode="N">N빙고</button>
+  </div>
+</div>
 
-  <script>
-    let numbers = [];
-    let usedNumbers = [];
-    let maxValue = 75;
+<div id="pool"></div>
 
-    function initializeNumbers() {
-      numbers = Array.from({ length: maxValue }, (_, i) => i + 1);
-      usedNumbers = [];
-      document.getElementById('result').innerText = '';
-      document.getElementById('used').innerText = '';
+<div class="draw-row">
+  <div id="curBox">
+    <div id="curNum">?</div>
+    <div id="curLbl">추첨!</div>
+  </div>
+  <div class="side-btns">
+    <button id="btnDraw" onclick="draw()">번호 뽑기</button>
+    <div class="row2">
+      <button id="btnNewCard" onclick="newCard()">새 카드</button>
+      <button id="btnRestart" onclick="restart()">다시 시작</button>
+    </div>
+  </div>
+</div>
+
+<div id="stats">
+  남은 <span id="sRemain">75</span>개 &nbsp;|&nbsp;
+  추첨 <span id="sDrawn">0</span>개 &nbsp;|&nbsp;
+  <span id="sBingoLabel">빙고</span> <span class="bc" id="sBingo">0줄</span>
+</div>
+
+<div class="card-wrap">
+  <div class="bingo-hdr">
+    <div class="bh B">B</div>
+    <div class="bh I">I</div>
+    <div class="bh N">N</div>
+    <div class="bh G">G</div>
+    <div class="bh O">O</div>
+  </div>
+  <div id="cardGrid"></div>
+</div>
+
+<p id="tapHint">💡 카드 숫자를 탭하면 직접 체크 / 다시 탭하면 해제</p>
+
+<div id="drawnWrap">
+  <div id="drawnTitle">추첨된 번호</div>
+  <div id="drawnNums"></div>
+</div>
+
+<div id="toast"><div id="toastInner">BINGO!</div></div>
+
+<script>
+// ───────────── 상수 ─────────────
+const RANGES  = [[1,15],[16,30],[31,45],[46,60],[61,75]];
+const COL_CLR = ['#e63946','#2a9d8f','#c9a020','#457b9d','#8338ec'];
+const BALL_CLR= ['#e63946','#2a9d8f','#c9a020','#457b9d','#8338ec',
+                 '#f4a261','#6a4c93','#1982c4','#8ac926','#ff595e'];
+const BSIZE = 34;
+
+// ───────────── 빙고 유형 정의 ─────────────
+function makePattern(cells) { return new Set(cells.map(([r,c])=>r*5+c)); }
+
+// H: 좌열 + 우열 + 가운데행
+const H_PAT = makePattern([
+  [0,0],[1,0],[2,0],[3,0],[4,0],
+  [0,4],[1,4],[2,4],[3,4],[4,4],
+  [2,0],[2,1],[2,2],[2,3],[2,4]
+]);
+// I: 위행 + 아래행 + 가운데열
+const I_PAT = makePattern([
+  [0,0],[0,1],[0,2],[0,3],[0,4],
+  [4,0],[4,1],[4,2],[4,3],[4,4],
+  [0,2],[1,2],[2,2],[3,2],[4,2]
+]);
+// N: 좌열 + 우열 + 대각선(↘)
+const N_PAT = makePattern([
+  [0,0],[1,0],[2,0],[3,0],[4,0],
+  [0,4],[1,4],[2,4],[3,4],[4,4],
+  [0,0],[1,1],[2,2],[3,3],[4,4]
+]);
+
+const MODES = {
+  '1줄': { label:'1줄 빙고',  type:'lines', count:1, btnClass:'on' },
+  '2줄': { label:'2줄 빙고',  type:'lines', count:2, btnClass:'on' },
+  '3줄': { label:'3줄 빙고',  type:'lines', count:3, btnClass:'on' },
+  '4줄': { label:'4줄 빙고',  type:'lines', count:4, btnClass:'on' },
+  '5줄': { label:'5줄 빙고',  type:'lines', count:5, btnClass:'on' },
+  '올빙고':{ label:'올 빙고', type:'full',  btnClass:'full-on' },
+  'H':   { label:'H 빙고',    type:'pattern', pattern:H_PAT, btnClass:'h-on' },
+  'I':   { label:'I 빙고',    type:'pattern', pattern:I_PAT, btnClass:'i-on' },
+  'N':   { label:'N 빙고',    type:'pattern', pattern:N_PAT, btnClass:'n-on' },
+};
+
+// ───────────── 상태 ─────────────
+let remaining, drawnList, card, marked, detectedLines, gameWon;
+let currentMode = '1줄';
+let balls = [], animId = null, pW = 0, pH = 0;
+
+// ───────────── 모드 선택 ─────────────
+document.querySelectorAll('.mbtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentMode = btn.dataset.mode;
+    document.querySelectorAll('.mbtn').forEach(b => b.className='mbtn');
+    btn.className = 'mbtn ' + MODES[currentMode].btnClass;
+    gameWon = false;
+    detectedLines = getBingoLines();
+    updateStats();
+    renderCard();
+  });
+});
+
+// ───────────── 유틸 ─────────────
+function shuffle(a) {
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+function numCol(n){ return Math.min(Math.floor((n-1)/15),4); }
+
+// ───────────── 카드 생성 ─────────────
+function genCard() {
+  const c=Array.from({length:5},()=>Array(5).fill(0));
+  for(let col=0;col<5;col++){
+    const [mn,mx]=RANGES[col];
+    const pool=[]; for(let i=mn;i<=mx;i++) pool.push(i);
+    shuffle(pool);
+    for(let row=0;row<5;row++) c[row][col]=pool[row];
+  }
+  c[2][2]=0; // FREE
+  return c;
+}
+
+// ───────────── 빙고 라인 ─────────────
+function allLines(){
+  const L=[];
+  for(let r=0;r<5;r++) L.push([[r,0],[r,1],[r,2],[r,3],[r,4]]);
+  for(let c=0;c<5;c++) L.push([[0,c],[1,c],[2,c],[3,c],[4,c]]);
+  L.push([[0,0],[1,1],[2,2],[3,3],[4,4]]);
+  L.push([[0,4],[1,3],[2,2],[3,1],[4,0]]);
+  return L;
+}
+function getBingoLines(){ return allLines().filter(l=>l.every(([r,c])=>marked[r][c])); }
+function lineKey(l){ return l.map(([r,c])=>r*5+c).join(''); }
+
+// ───────────── 승리 조건 ─────────────
+function checkWin(){
+  if(gameWon) return false;
+  const m=MODES[currentMode];
+  let won=false;
+  if(m.type==='lines')   won=detectedLines.length>=m.count;
+  else if(m.type==='full') won=marked.every(row=>row.every(v=>v));
+  else if(m.type==='pattern') won=[...m.pattern].every(k=>marked[Math.floor(k/5)][k%5]);
+  if(won){ gameWon=true; return true; }
+  return false;
+}
+
+// ───────────── 통계 업데이트 ─────────────
+function updateStats(){
+  const m=MODES[currentMode];
+  let s='';
+  if(m.type==='lines'){
+    document.getElementById('sBingoLabel').textContent='빙고';
+    s=detectedLines.length+'줄';
+  } else if(m.type==='full'){
+    document.getElementById('sBingoLabel').textContent='올빙고';
+    const cnt=marked.flat().filter(v=>v).length;
+    s=cnt+'/25';
+  } else {
+    document.getElementById('sBingoLabel').textContent=m.label;
+    const total=m.pattern.size;
+    const done=[...m.pattern].filter(k=>marked[Math.floor(k/5)][k%5]).length;
+    s=done+'/'+total;
+  }
+  document.getElementById('sBingo').textContent=s;
+}
+
+// ───────────── 볼 풀 ─────────────
+function initBalls(){
+  const pool=document.getElementById('pool');
+  pool.innerHTML=''; balls=[];
+  pW=pool.clientWidth; pH=pool.clientHeight;
+  const sample=shuffle([...remaining]).slice(0,Math.min(18,remaining.length));
+  sample.forEach((n,i)=>{
+    const el=document.createElement('div');
+    el.className='ball'; el.textContent=n;
+    el.style.background=BALL_CLR[i%BALL_CLR.length];
+    pool.appendChild(el);
+    const ang=Math.random()*Math.PI*2, spd=0.5+Math.random()*0.9;
+    balls.push({el,x:BSIZE+Math.random()*(pW-BSIZE*2),y:BSIZE+Math.random()*(pH-BSIZE*2),
+      vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd});
+  });
+}
+function animBalls(){
+  balls.forEach(b=>{
+    b.x+=b.vx; b.y+=b.vy;
+    if(b.x<=0){b.x=0;b.vx=Math.abs(b.vx);}
+    if(b.x>=pW-BSIZE){b.x=pW-BSIZE;b.vx=-Math.abs(b.vx);}
+    if(b.y<=0){b.y=0;b.vy=Math.abs(b.vy);}
+    if(b.y>=pH-BSIZE){b.y=pH-BSIZE;b.vy=-Math.abs(b.vy);}
+    b.el.style.transform=`translate(${b.x}px,${b.y}px)`;
+  });
+  animId=requestAnimationFrame(animBalls);
+}
+
+// ───────────── 추첨 ─────────────
+function draw(){
+  if(!remaining.length) return;
+  const idx=Math.floor(Math.random()*remaining.length);
+  const n=remaining.splice(idx,1)[0];
+  drawnList.push(n);
+
+  document.getElementById('curNum').textContent=n;
+  document.getElementById('curBox').classList.add('on');
+
+  for(let r=0;r<5;r++) for(let c=0;c<5;c++)
+    if(card[r][c]===n) marked[r][c]=true;
+
+  afterMark();
+
+  document.getElementById('sRemain').textContent=remaining.length;
+  document.getElementById('sDrawn').textContent=drawnList.length;
+
+  if(!remaining.length){
+    document.getElementById('btnDraw').disabled=true;
+    if(animId){cancelAnimationFrame(animId);animId=null;}
+    document.getElementById('pool').innerHTML=
+      '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#555577;font-size:0.9rem">추첨 완료</div>';
+  } else { initBalls(); if(animId) cancelAnimationFrame(animId); animBalls(); }
+
+  renderDrawn(n);
+}
+
+// ───────────── 셀 탭 토글 ─────────────
+function toggleCell(r,c){
+  marked[r][c]=!marked[r][c];
+  afterMark();
+}
+
+// ───────────── 마킹 후 공통 처리 ─────────────
+function afterMark(){
+  const prevCount=detectedLines.length;
+  detectedLines=getBingoLines();
+
+  const m=MODES[currentMode];
+
+  if(checkWin()){
+    showToast(m.label+' 달성! 🎉', true);
+  } else if(m.type==='lines' && detectedLines.length>prevCount){
+    const newCnt=detectedLines.length;
+    showToast(newCnt+'줄 완성!', false);
+  }
+
+  updateStats();
+  renderCard();
+}
+
+// ───────────── 토스트 ─────────────
+function showToast(msg, big){
+  const inner=document.getElementById('toastInner');
+  inner.textContent=msg;
+  inner.style.fontSize=big?'2.6rem':'1.6rem';
+  inner.style.letterSpacing=big?'4px':'2px';
+  const t=document.getElementById('toast');
+  t.classList.remove('on'); void t.offsetWidth; t.classList.add('on');
+  setTimeout(()=>t.classList.remove('on'),1800);
+}
+
+// ───────────── 카드 렌더 ─────────────
+function renderCard(){
+  const grid=document.getElementById('cardGrid');
+  grid.innerHTML='';
+
+  const m=MODES[currentMode];
+  const bingoSet=new Set();
+  if(m.type==='lines') detectedLines.forEach(l=>l.forEach(([r,c])=>bingoSet.add(r*5+c)));
+  // 패턴/올빙고 승리 시 전체 패턴 하이라이트
+  const patternWon = gameWon && m.type!=='lines';
+
+  for(let r=0;r<5;r++){
+    for(let c=0;c<5;c++){
+      const d=document.createElement('div');
+      const key=r*5+c, free=r===2&&c===2;
+      const isTarget = m.type==='pattern' && m.pattern.has(key);
+      const isMark=marked[r][c];
+
+      if(patternWon && (m.type==='full'||(m.type==='pattern'&&isTarget)))
+        d.className='cc bingo';
+      else if(bingoSet.has(key))
+        d.className='cc bingo';
+      else if(isMark && isTarget)
+        d.className='cc hit-t';
+      else if(isMark)
+        d.className='cc hit';
+      else if(free)
+        d.className='cc free';
+      else if(isTarget)
+        d.className='cc target';
+      else
+        d.className='cc';
+
+      d.textContent=free?'FREE':card[r][c];
+      if(!free) d.addEventListener('click',()=>toggleCell(r,c));
+      grid.appendChild(d);
     }
+  }
+}
 
-    function drawNumber() {
-      const inputValue = parseInt(document.getElementById('max-input').value);
-      if (isNaN(inputValue) || inputValue < 1) {
-        alert("최대 숫자를 올바르게 입력하세요!");
-        return;
-      }
+// ───────────── 뽑힌 번호 ─────────────
+function renderDrawn(latest){
+  const wrap=document.getElementById('drawnNums');
+  wrap.innerHTML='';
+  drawnList.forEach(n=>{
+    const d=document.createElement('div');
+    d.className='dn'+(n===latest?' latest':'');
+    d.textContent=n; d.style.background=COL_CLR[numCol(n)];
+    wrap.appendChild(d);
+  });
+  wrap.scrollTop=wrap.scrollHeight;
+}
 
-      if (inputValue !== maxValue || numbers.length === 0) {
-        maxValue = inputValue;
-        initializeNumbers();
-      }
+// ───────────── 새 카드 ─────────────
+function newCard(){
+  card=genCard(); gameWon=false;
+  marked=Array.from({length:5},()=>Array(5).fill(false));
+  marked[2][2]=true;
+  drawnList.forEach(n=>{
+    for(let r=0;r<5;r++) for(let c=0;c<5;c++) if(card[r][c]===n) marked[r][c]=true;
+  });
+  detectedLines=getBingoLines();
+  updateStats(); renderCard();
+}
 
-      if (numbers.length === 0) {
-        document.getElementById('result').innerText = "모든 숫자를 뽑았습니다!";
-        return;
-      }
+// ───────────── 전체 재시작 ─────────────
+function restart(){
+  if(animId){cancelAnimationFrame(animId);animId=null;}
+  remaining=[]; for(let i=1;i<=75;i++) remaining.push(i); shuffle(remaining);
+  drawnList=[]; card=genCard(); gameWon=false;
+  marked=Array.from({length:5},()=>Array(5).fill(false));
+  marked[2][2]=true; detectedLines=[];
 
-      const index = Math.floor(Math.random() * numbers.length);
-      const num = numbers.splice(index, 1)[0];
-      usedNumbers.push(num);
+  document.getElementById('curBox').classList.remove('on');
+  document.getElementById('curNum').textContent='?';
+  document.getElementById('sRemain').textContent='75';
+  document.getElementById('sDrawn').textContent='0';
+  document.getElementById('btnDraw').disabled=false;
+  document.getElementById('drawnNums').innerHTML='';
 
-      document.getElementById('result').innerText = num;
-      document.getElementById('used').innerText =
-        "지금까지 나온 숫자: " + usedNumbers.sort((a, b) => a - b).join(', ');
+  updateStats(); renderCard(); initBalls(); animBalls();
+}
 
-      document.getElementById('bell-sound').play();
-    }
-
-    function resetDraw() {
-      if (confirm("정말로 초기화할까요?")) {
-        maxValue = parseInt(document.getElementById('max-input').value) || 75;
-        initializeNumbers();
-      }
-    }
-  </script>
+restart();
+</script>
 </body>
 </html>
