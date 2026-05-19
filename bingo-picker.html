@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>번호 추첨기</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #0d0d1a;
+  color: #fff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 12px 24px;
+  overflow-x: hidden;
+}
+
+h1 {
+  font-size: 1.3rem;
+  letter-spacing: 2px;
+  margin-bottom: 14px;
+  color: #c8c8ff;
+  text-align: center;
+}
+
+/* 공 풀 영역 */
+#pool {
+  width: 100%;
+  max-width: 420px;
+  height: 180px;
+  background: #111128;
+  border-radius: 18px;
+  border: 2px solid #2a2a5a;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 18px;
+  box-shadow: inset 0 0 30px rgba(0,0,80,0.5);
+}
+
+.ball {
+  position: absolute;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #fff;
+  pointer-events: none;
+  will-change: transform;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.4), inset 0 -3px 6px rgba(0,0,0,0.2);
+}
+
+/* 현재 번호 */
+#currentWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+#currentLabel {
+  font-size: 0.75rem;
+  color: #8888aa;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+#currentCircle {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: #1c1c36;
+  border: 3px solid #2a2a5a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 0 0 transparent;
+}
+
+#currentCircle.active {
+  border-color: #ff4d6d;
+  box-shadow: 0 0 30px rgba(255,77,109,0.4), 0 0 60px rgba(255,77,109,0.15);
+  background: linear-gradient(145deg, #2a1020, #1a1040);
+}
+
+#currentNum {
+  font-size: 3.8rem;
+  font-weight: 900;
+  line-height: 1;
+  color: #fff;
+}
+
+#currentCircle:not(.active) #currentNum {
+  color: #333355;
+  font-size: 2.5rem;
+}
+
+#currentSub {
+  font-size: 0.65rem;
+  color: #ff4d6d;
+  margin-top: 4px;
+  letter-spacing: 1px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+#currentCircle.active #currentSub {
+  opacity: 1;
+}
+
+/* 통계 */
+#stats {
+  font-size: 0.82rem;
+  color: #7777aa;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+#stats span {
+  color: #aaaadd;
+  font-weight: bold;
+}
+
+/* 버튼 */
+.btns {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+  margin-bottom: 22px;
+}
+
+button {
+  border: none;
+  border-radius: 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+  -webkit-appearance: none;
+  outline: none;
+  padding: 15px 0;
+}
+
+button:active { transform: scale(0.94); }
+
+#drawBtn {
+  flex: 2;
+  background: linear-gradient(135deg, #ff4d6d, #c9184a);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(255,77,109,0.35);
+}
+
+#drawBtn:disabled {
+  background: #333;
+  color: #666;
+  box-shadow: none;
+  cursor: default;
+}
+
+#restartBtn {
+  flex: 1;
+  background: #1c1c3a;
+  color: #aaaadd;
+  border: 2px solid #2a2a5a;
+}
+
+/* 번호 그리드 */
+#gridTitle {
+  font-size: 0.78rem;
+  color: #666688;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+#grid {
+  display: grid;
+  grid-template-columns: repeat(15, 1fr);
+  gap: 3px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.cell {
+  aspect-ratio: 1;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  font-weight: 700;
+  background: #1a1a30;
+  color: #333355;
+  transition: background 0.25s, color 0.25s, transform 0.2s, box-shadow 0.2s;
+}
+
+.cell.drawn {
+  background: #3d1020;
+  color: #ff4d6d;
+}
+
+.cell.current {
+  background: #ff4d6d;
+  color: #fff;
+  transform: scale(1.15);
+  box-shadow: 0 0 8px rgba(255,77,109,0.6);
+}
+
+/* 팝 애니메이션 */
+@keyframes pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+.pop { animation: pop 0.4s ease-out; }
+</style>
+</head>
+<body>
+
+<h1>🎱 번호 추첨기</h1>
+
+<div id="pool"></div>
+
+<div id="currentWrap">
+  <div id="currentLabel">추첨 대기 중</div>
+  <div id="currentCircle">
+    <div id="currentNum">?</div>
+    <div id="currentSub">당첨!</div>
+  </div>
+</div>
+
+<div id="stats">남은 번호: <span id="remain">75</span>개 &nbsp;|&nbsp; 추첨: <span id="drawn">0</span>개</div>
+
+<div class="btns">
+  <button id="drawBtn" onclick="draw()">번호 뽑기</button>
+  <button id="restartBtn" onclick="restart()">다시 시작</button>
+</div>
+
+<div id="gridTitle">전체 번호 현황</div>
+<div id="grid"></div>
+
+<script>
+// ── 상태 ──────────────────────────────────────
+let remaining = [];
+let drawnList = [];
+let lastDrawn = null;
+
+const BALL_COLORS = [
+  '#e63946','#457b9d','#2a9d8f','#e9c46a',
+  '#f4a261','#6a4c93','#1982c4','#8ac926',
+  '#ff595e','#6a4c93','#3a86ff','#fb5607'
+];
+
+// ── 볼 물리 ────────────────────────────────────
+const BALL_COUNT = 22;
+const BALL_SIZE = 38;
+let balls = [];
+let animId = null;
+let poolW = 0, poolH = 0;
+
+function initBalls() {
+  const pool = document.getElementById('pool');
+  pool.innerHTML = '';
+  balls = [];
+  poolW = pool.clientWidth;
+  poolH = pool.clientHeight;
+
+  const nums = shuffle([...remaining]).slice(0, Math.min(BALL_COUNT, remaining.length));
+
+  nums.forEach((n, i) => {
+    const el = document.createElement('div');
+    el.className = 'ball';
+    el.textContent = n;
+    el.style.background = BALL_COLORS[i % BALL_COLORS.length];
+    pool.appendChild(el);
+
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 0.6 + Math.random() * 0.9;
+    balls.push({
+      el,
+      x: BALL_SIZE + Math.random() * (poolW - BALL_SIZE * 2),
+      y: BALL_SIZE + Math.random() * (poolH - BALL_SIZE * 2),
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed
+    });
+  });
+}
+
+function animateBalls() {
+  balls.forEach(b => {
+    b.x += b.vx;
+    b.y += b.vy;
+
+    if (b.x <= 0) { b.x = 0; b.vx = Math.abs(b.vx); }
+    if (b.x >= poolW - BALL_SIZE) { b.x = poolW - BALL_SIZE; b.vx = -Math.abs(b.vx); }
+    if (b.y <= 0) { b.y = 0; b.vy = Math.abs(b.vy); }
+    if (b.y >= poolH - BALL_SIZE) { b.y = poolH - BALL_SIZE; b.vy = -Math.abs(b.vy); }
+
+    b.el.style.transform = `translate(${b.x}px, ${b.y}px)`;
+  });
+  animId = requestAnimationFrame(animateBalls);
+}
+
+function startAnim() {
+  if (animId) cancelAnimationFrame(animId);
+  animateBalls();
+}
+
+// ── 유틸 ──────────────────────────────────────
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// ── 그리드 ────────────────────────────────────
+function buildGrid() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  for (let i = 1; i <= 75; i++) {
+    const d = document.createElement('div');
+    d.className = 'cell';
+    d.textContent = i;
+    d.id = 'c' + i;
+    grid.appendChild(d);
+  }
+}
+
+function updateGrid(n) {
+  // 이전 current → drawn
+  if (lastDrawn !== null) {
+    const prev = document.getElementById('c' + lastDrawn);
+    if (prev) { prev.className = 'cell drawn'; }
+  }
+  // 새 current
+  const cur = document.getElementById('c' + n);
+  if (cur) {
+    cur.className = 'cell current';
+    // 스크롤해서 보이도록
+    cur.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+// ── 추첨 ──────────────────────────────────────
+function draw() {
+  if (remaining.length === 0) return;
+
+  const idx = Math.floor(Math.random() * remaining.length);
+  const n = remaining.splice(idx, 1)[0];
+  drawnList.push(n);
+  lastDrawn = n;
+
+  // 현재 번호 표시
+  const circle = document.getElementById('currentCircle');
+  const numEl = document.getElementById('currentNum');
+
+  circle.classList.add('active');
+  numEl.textContent = n;
+
+  // 팝 애니메이션
+  circle.classList.remove('pop');
+  void circle.offsetWidth; // reflow
+  circle.classList.add('pop');
+
+  // 통계
+  document.getElementById('remain').textContent = remaining.length;
+  document.getElementById('drawn').textContent = drawnList.length;
+
+  // 그리드
+  updateGrid(n);
+
+  // 풀 갱신
+  initBalls();
+  startAnim();
+
+  if (remaining.length === 0) {
+    document.getElementById('drawBtn').disabled = true;
+    document.getElementById('currentLabel').textContent = '모든 번호 추첨 완료!';
+    if (animId) { cancelAnimationFrame(animId); animId = null; }
+    document.getElementById('pool').innerHTML =
+      '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#555577;font-size:0.9rem;">추첨 완료</div>';
+  }
+}
+
+// ── 다시 시작 ─────────────────────────────────
+function restart() {
+  if (animId) { cancelAnimationFrame(animId); animId = null; }
+
+  remaining = shuffle(Array.from({ length: 75 }, (_, i) => i + 1));
+  drawnList = [];
+  lastDrawn = null;
+
+  document.getElementById('currentCircle').classList.remove('active', 'pop');
+  document.getElementById('currentNum').textContent = '?';
+  document.getElementById('currentLabel').textContent = '추첨 대기 중';
+  document.getElementById('remain').textContent = '75';
+  document.getElementById('drawn').textContent = '0';
+  document.getElementById('drawBtn').disabled = false;
+
+  buildGrid();
+  initBalls();
+  startAnim();
+}
+
+// ── 초기화 ────────────────────────────────────
+restart();
+</script>
+</body>
+</html>
